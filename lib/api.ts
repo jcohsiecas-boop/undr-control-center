@@ -10,7 +10,7 @@ export async function requireSession() {
   return { session, response: null };
 }
 
-export function serialize<T>(data: T): any {
+export function serialize<T>(data: T): T {
   return JSON.parse(
     JSON.stringify(data, (_key, value) => (typeof value === "bigint" ? value.toString() : value))
   );
