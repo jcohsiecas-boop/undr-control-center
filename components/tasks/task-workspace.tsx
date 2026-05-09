@@ -153,7 +153,8 @@ function Kanban({ tasks, onDragEnd }: { tasks: Task[]; onDragEnd: (result: DropR
                   {tasks.filter((task) => task.status === status).map((task, index) => (
                     <Draggable key={task.id} draggableId={task.id} index={index}>
                       {(drag) => (
-                        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} ref={drag.innerRef} {...drag.draggableProps} {...drag.dragHandleProps} className="rounded-md border border-border bg-background/70 p-3 shadow-sm">
+                        <div ref={drag.innerRef} {...drag.draggableProps} {...drag.dragHandleProps}>
+                          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-md border border-border bg-background/70 p-3 shadow-sm">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium">{task.title}</p>
                             <Badge tone={priorityTone[task.priority]}>{task.priority}</Badge>
@@ -161,7 +162,8 @@ function Kanban({ tasks, onDragEnd }: { tasks: Task[]; onDragEnd: (result: DropR
                           <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
                           <div className="mt-3 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${task.progress}%` }} /></div>
                           <div className="mt-3 flex flex-wrap gap-1">{task.tags.map((tag) => <Badge key={tag}>{tag}</Badge>)}</div>
-                        </motion.div>
+                          </motion.div>
+                        </div>
                       )}
                     </Draggable>
                   ))}
