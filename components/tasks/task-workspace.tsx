@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { motion } from "framer-motion";
-import { Filter, KanbanSquare, ListFilter, Plus, Search } from "lucide-react";
+import { MessageSquare, Plus, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +49,7 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [draft, setDraft] = useState({ title: "", description: "", phaseId: phases[0]?.id ?? "", priority: "MEDIUM" });
+  const [comments, setComments] = useState<Record<string, string>>({});
 
   const filtered = useMemo(
     () =>
@@ -66,6 +67,33 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: nextStatus, progress: nextStatus === "COMPLETED" ? 100 : undefined })
     });
+  }
+
+  async function updateProgress(taskId: string, progress: number) {
+    setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, progress } : task)));
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ progress })
+    });
+  }
+
+  async function addComment(taskId: string) {
+    const body = comments[taskId]?.trim();
+    if (!body) return;
+    const response = await fetch(`/api/tasks/${taskId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body })
+    });
+    const comment = await response.json();
+    setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, comments: [comment, ...task.comments] } : task)));
+    setComments((current) => ({ ...current, [taskId]: "" }));
+  }
+
+  async function deleteTask(taskId: string) {
+    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    setTasks((current) => current.filter((task) => task.id !== taskId));
   }
 
   async function onDragEnd(result: DropResult) {
@@ -96,8 +124,8 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
           <p className="mt-2 text-sm text-muted-foreground">Tareas, evidencias, comentarios, responsables, fases y avance ejecutivo.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant={view === "kanban" ? "default" : "outline"} onClick={() => setView("kanban")}><KanbanSquare className="h-4 w-4" /> Kanban</Button>
-          <Button variant={view === "table" ? "default" : "outline"} onClick={() => setView("table")}><ListFilter className="h-4 w-4" /> Tabla</Button>
+          <Button variant={view === "kanban" ? "default" : "outline"} onClick={() => setView("kanban")}>Kanban</Button>
+          <Button variant={view === "table" ? "default" : "outline"} onClick={() => setView("table")}>Tabla</Button>
         </div>
       </section>
 
@@ -118,7 +146,7 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
             <option value="HIGH">Alta</option>
             <option value="CRITICAL">Critica</option>
           </Select>
-          <Button variant="secondary"><Filter className="h-4 w-4" /> {filtered.length}</Button>
+          <Button variant="secondary">{filtered.length}</Button>
         </CardContent>
       </Card>
 
@@ -135,12 +163,28 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
         </CardContent>
       </Card>
 
-      {view === "kanban" ? <Kanban tasks={filtered} onDragEnd={onDragEnd} /> : <TaskTable tasks={filtered} updateStatus={updateStatus} />}
+      {view === "kanban" ? <Kanban tasks={filtered} onDragEnd={onDragEnd} updateProgress={updateProgress} deleteTask={deleteTask} comments={comments} setComments={setComments} addComment={addComment} /> : <TaskTable tasks={filtered} updateStatus={updateStatus} updateProgress={updateProgress} deleteTask={deleteTask} />}
     </div>
   );
 }
 
-function Kanban({ tasks, onDragEnd }: { tasks: Task[]; onDragEnd: (result: DropResult) => void }) {
+function Kanban({
+  tasks,
+  onDragEnd,
+  updateProgress,
+  deleteTask,
+  comments,
+  setComments,
+  addComment
+}: {
+  tasks: Task[];
+  onDragEnd: (result: DropResult) => void;
+  updateProgress: (id: string, progress: number) => void;
+  deleteTask: (id: string) => void;
+  comments: Record<string, string>;
+  setComments: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  addComment: (id: string) => void;
+}) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <div className="grid gap-4 xl:grid-cols-4">
@@ -159,9 +203,18 @@ function Kanban({ tasks, onDragEnd }: { tasks: Task[]; onDragEnd: (result: DropR
                             <p className="text-sm font-medium">{task.title}</p>
                             <Badge tone={priorityTone[task.priority]}>{task.priority}</Badge>
                           </div>
+                          <p className="mt-2 text-xs text-muted-foreground">Responsable: {task.assignee?.name ?? task.assignee?.email ?? "Sin asignar"}</p>
                           <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
-                          <div className="mt-3 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${task.progress}%` }} /></div>
+                          <label className="mt-3 block text-xs text-muted-foreground">Avance {task.progress}%</label>
+                          <input className="mt-1 w-full accent-red-600" type="range" min="0" max="100" value={task.progress} onChange={(event) => updateProgress(task.id, Number(event.target.value))} />
+                          <div className="mt-2 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${task.progress}%` }} /></div>
                           <div className="mt-3 flex flex-wrap gap-1">{task.tags.map((tag) => <Badge key={tag}>{tag}</Badge>)}</div>
+                          <div className="mt-3 rounded-md border border-border bg-card/50 p-2">
+                            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><MessageSquare className="h-3 w-3" /> {task.comments.length} comentarios</div>
+                            <Input value={comments[task.id] ?? ""} onChange={(event) => setComments((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="Agregar comentario" />
+                            <Button className="mt-2 w-full" size="sm" variant="secondary" onClick={() => addComment(task.id)}>Comentar</Button>
+                          </div>
+                          <Button className="mt-3 w-full" size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /> Eliminar</Button>
                           </motion.div>
                         </div>
                       )}
@@ -178,13 +231,13 @@ function Kanban({ tasks, onDragEnd }: { tasks: Task[]; onDragEnd: (result: DropR
   );
 }
 
-function TaskTable({ tasks, updateStatus }: { tasks: Task[]; updateStatus: (id: string, status: Task["status"]) => void }) {
+function TaskTable({ tasks, updateStatus, updateProgress, deleteTask }: { tasks: Task[]; updateStatus: (id: string, status: Task["status"]) => void; updateProgress: (id: string, progress: number) => void; deleteTask: (id: string) => void }) {
   return (
     <Card className="overflow-hidden bg-card/75 backdrop-blur">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[960px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-            <tr><th className="p-3">Tarea</th><th>Fase</th><th>Prioridad</th><th>Estado</th><th>Responsable</th><th>Avance</th><th>Evidencias</th></tr>
+            <tr><th className="p-3">Tarea</th><th>Fase</th><th>Prioridad</th><th>Estado</th><th>Responsable</th><th>Avance</th><th>Comentarios</th><th></th></tr>
           </thead>
           <tbody>
             {tasks.map((task) => (
@@ -193,9 +246,10 @@ function TaskTable({ tasks, updateStatus }: { tasks: Task[]; updateStatus: (id: 
                 <td>{task.phase.name}</td>
                 <td><Badge tone={priorityTone[task.priority]}>{task.priority}</Badge></td>
                 <td><Select value={task.status} onChange={(e) => updateStatus(task.id, e.target.value as Task["status"])}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></td>
-                <td>{task.assignee?.name ?? "Sin asignar"}</td>
-                <td>{task.progress}%</td>
-                <td>{task.attachments.length}</td>
+                <td>{task.assignee?.name ?? task.assignee?.email ?? "Sin asignar"}</td>
+                <td><Input type="number" min={0} max={100} value={task.progress} onChange={(e) => updateProgress(task.id, Number(e.target.value))} /></td>
+                <td>{task.comments.length}</td>
+                <td><Button size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /></Button></td>
               </tr>
             ))}
           </tbody>

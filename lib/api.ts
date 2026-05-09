@@ -2,8 +2,8 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 
-export type JsonSerialized<T> = T extends Date
-  ? string
+export type JsonSerialized<T> = T extends { toJSON(): infer R }
+  ? R
   : T extends Array<infer U>
     ? JsonSerialized<U>[]
     : T extends object

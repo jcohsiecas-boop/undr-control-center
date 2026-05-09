@@ -53,6 +53,26 @@ enum FinancialType {
   EXPENSE
 }
 
+enum InvoiceStatus {
+  INVOICED
+  RECEIVABLE
+  PAID
+  VOID
+}
+
+enum TaxType {
+  NONE
+  IVA
+  RENTA
+}
+
+enum EventLineType {
+  INCOME
+  EXPENSE
+  PERSONNEL
+  SPONSOR
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -199,8 +219,28 @@ model Event {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   eventFinances EventFinance[]
+  lineItems     EventLineItem[]
 
   @@map("events")
+}
+
+model EventLineItem {
+  id          String        @id @default(cuid())
+  eventId     String
+  event       Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  type        EventLineType
+  concept     String
+  quantity    Int           @default(1)
+  unitCost    Decimal       @db.Decimal(14, 2)
+  projected   Decimal       @db.Decimal(14, 2)
+  actual      Decimal       @db.Decimal(14, 2)
+  paid        Boolean       @default(false)
+  responsible String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([eventId, type])
+  @@map("event_line_items")
 }
 
 model EventFinance {
@@ -255,9 +295,29 @@ model FinancialRecord {
   amount      Decimal       @db.Decimal(14, 2)
   month       DateTime
   projected   Boolean       @default(false)
+  invoiceStatus InvoiceStatus @default(PAID)
+  taxType     TaxType       @default(NONE)
+  taxPaid     Boolean       @default(false)
+  bankAccountId String?
+  bankAccount BankAccount?  @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([type, month])
+  @@index([bankAccountId])
   @@map("financial_records")
+}
+
+model BankAccount {
+  id          String            @id @default(cuid())
+  name        String
+  bank        String
+  accountNo   String?
+  currency    String            @default("COP")
+  balance     Decimal           @db.Decimal(14, 2)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  records     FinancialRecord[]
+
+  @@map("bank_accounts")
 }

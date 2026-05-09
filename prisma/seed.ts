@@ -1,4 +1,4 @@
-import { PrismaClient, Priority, TaskStatus, FinancialType, PartnerType, InventoryCategory, InventoryStatus, AttachmentType } from "@prisma/client";
+import { PrismaClient, Priority, TaskStatus, FinancialType, PartnerType, InventoryCategory, InventoryStatus, AttachmentType, TaxType, InvoiceStatus, EventLineType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -21,9 +21,11 @@ async function main() {
   await prisma.activityLog.deleteMany();
   await prisma.task.deleteMany();
   await prisma.phase.deleteMany();
+  await prisma.eventLineItem.deleteMany();
   await prisma.eventFinance.deleteMany();
   await prisma.event.deleteMany();
   await prisma.financialRecord.deleteMany();
+  await prisma.bankAccount.deleteMany();
   await prisma.partner.deleteMany();
   await prisma.inventory.deleteMany();
 
@@ -91,6 +93,10 @@ async function main() {
     });
   }
 
+  const mainAccount = await prisma.bankAccount.create({
+    data: { name: "Caja principal UNDR", bank: "Bancolombia", accountNo: "000-000", balance: 0 }
+  });
+
   const records = [
     [FinancialType.INCOME, "Tickets", "Venta anticipada eventos", 168000000, "2026-01-01", false],
     [FinancialType.INCOME, "Sponsors", "Patrocinios confirmados", 72000000, "2026-01-01", false],
@@ -100,8 +106,24 @@ async function main() {
     [FinancialType.EXPENSE, "Proyeccion", "Costos proyectados Q2", 130000000, "2026-02-01", true]
   ] as const;
   for (const [type, category, description, amount, month, projected] of records) {
-    await prisma.financialRecord.create({ data: { type, category, description, amount, month: new Date(month), projected } });
+    await prisma.financialRecord.create({
+      data: {
+        type,
+        category,
+        description,
+        amount,
+        month: new Date(month),
+        projected,
+        invoiceStatus: projected ? InvoiceStatus.RECEIVABLE : InvoiceStatus.PAID,
+        taxType: type === FinancialType.INCOME ? TaxType.IVA : TaxType.NONE,
+        bankAccountId: projected ? null : mainAccount.id
+      }
+    });
   }
+  await prisma.bankAccount.update({
+    where: { id: mainAccount.id },
+    data: { balance: 168000000 + 72000000 - 98000000 - 24500000 }
+  });
 
   const event = await prisma.event.create({
     data: {
@@ -115,6 +137,14 @@ async function main() {
   });
   await prisma.eventFinance.create({
     data: { eventId: event.id, income: 238000000, expenses: 151000000, utility: 87000000, roi: 57.62 }
+  });
+  await prisma.eventLineItem.createMany({
+    data: [
+      { eventId: event.id, type: EventLineType.EXPENSE, concept: "Alquiler de local", quantity: 1, unitCost: 14500000, projected: 14500000, actual: 14500000, paid: true, responsible: "Operacion" },
+      { eventId: event.id, type: EventLineType.PERSONNEL, concept: "DJs y staff", quantity: 8, unitCost: 1200000, projected: 9600000, actual: 11200000, paid: true, responsible: "Produccion" },
+      { eventId: event.id, type: EventLineType.INCOME, concept: "Venta de entradas", quantity: 1800, unitCost: 85000, projected: 153000000, actual: 166000000, paid: true, responsible: "Ticketing" },
+      { eventId: event.id, type: EventLineType.SPONSOR, concept: "Patrocinios", quantity: 2, unitCost: 36000000, projected: 72000000, actual: 72000000, paid: true, responsible: "Comercial" }
+    ]
   });
 
   await prisma.partner.createMany({

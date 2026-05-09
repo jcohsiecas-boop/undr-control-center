@@ -39,14 +39,14 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Progreso general" value={`${Math.round((completed / total) * 100)}%`} hint={`${completed} tareas completadas de ${tasks.length}`} icon={TrendingUp} />
-        <MetricCard label="Pendientes" value={`${pending}`} hint="Checklist ejecutivo abierto" icon={ClipboardList} />
-        <MetricCard label="Criticas" value={`${critical}`} hint="Requieren desbloqueo" icon={AlertTriangle} />
-        <MetricCard label="Utilidad neta" value={money(income - expenses)} hint="Real + proyectada registrada" icon={CircleDollarSign} />
-        <MetricCard label="Eventos" value={`${events.length}`} hint="Eventos en control financiero" icon={CalendarDays} />
-        <MetricCard label="Socios" value={`${partners.length}`} hint="Participacion y aportes" icon={Users} />
-        <MetricCard label="Activos" value={`${inventory.length}`} hint="Inventario trazable" icon={Package} />
-        <MetricCard label="Tareas cerradas" value={`${completed}`} hint="Evidencia lista para auditoria" icon={CheckCircle2} />
+        <MetricCard href="/tasks" label="Progreso general" value={`${Math.round((completed / total) * 100)}%`} hint={`${completed} tareas completadas de ${tasks.length}`} icon={TrendingUp} />
+        <MetricCard href="/tasks" label="Pendientes" value={`${pending}`} hint="Checklist ejecutivo abierto" icon={ClipboardList} />
+        <MetricCard href="/tasks" label="Criticas" value={`${critical}`} hint="Requieren desbloqueo" icon={AlertTriangle} />
+        <MetricCard href="/financial" label="Utilidad neta" value={money(income - expenses)} hint="Real + proyectada registrada" icon={CircleDollarSign} />
+        <MetricCard href="/events" label="Eventos" value={`${events.length}`} hint="Eventos en control financiero" icon={CalendarDays} />
+        <MetricCard href="/partners" label="Socios" value={`${partners.length}`} hint="Participacion y aportes" icon={Users} />
+        <MetricCard href="/inventory" label="Activos" value={`${inventory.length}`} hint="Inventario trazable" icon={Package} />
+        <MetricCard href="/tasks" label="Tareas cerradas" value={`${completed}`} hint="Evidencia lista para auditoria" icon={CheckCircle2} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
