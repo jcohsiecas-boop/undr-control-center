@@ -44,6 +44,15 @@ async function main() {
     )
   );
 
+  await prisma.partner.createMany({
+    data: [
+      { name: "Socio Operador", type: PartnerType.ACTIVE, contribution: 65000000, withdrawals: 12000000, loans: 0, participation: 42 },
+      { name: "Socio Capital", type: PartnerType.PASSIVE, contribution: 90000000, withdrawals: 0, loans: 18000000, participation: 38 },
+      { name: "Socio Creativo", type: PartnerType.ACTIVE, contribution: 25000000, withdrawals: 6000000, loans: 0, participation: 20 }
+    ]
+  });
+  const partners = await prisma.partner.findMany({ orderBy: { name: "asc" } });
+
   const taskPayload = [
     ["Centralizar actas societarias", "Digitalizar actas, estatutos, RUT, camara de comercio y contratos clave.", TaskStatus.IN_PROGRESS, Priority.CRITICAL, 65, phases[0].id, ["legal", "auditoria"]],
     ["Implementar control de caja semanal", "Registrar ingresos, egresos y conciliaciones con evidencia por semana.", TaskStatus.IN_PROGRESS, Priority.HIGH, 55, phases[2].id, ["caja", "finanzas"]],
@@ -63,6 +72,7 @@ async function main() {
         progress,
         phaseId,
         assigneeId: admin.id,
+        responsiblePartnerId: partners[0]?.id,
         tags: [...tags],
         completedAt: status === TaskStatus.COMPLETED ? new Date() : null
       }
@@ -144,14 +154,6 @@ async function main() {
       { eventId: event.id, type: EventLineType.PERSONNEL, concept: "DJs y staff", quantity: 8, unitCost: 1200000, projected: 9600000, actual: 11200000, paid: true, responsible: "Produccion" },
       { eventId: event.id, type: EventLineType.INCOME, concept: "Venta de entradas", quantity: 1800, unitCost: 85000, projected: 153000000, actual: 166000000, paid: true, responsible: "Ticketing" },
       { eventId: event.id, type: EventLineType.SPONSOR, concept: "Patrocinios", quantity: 2, unitCost: 36000000, projected: 72000000, actual: 72000000, paid: true, responsible: "Comercial" }
-    ]
-  });
-
-  await prisma.partner.createMany({
-    data: [
-      { name: "Socio Operador", type: PartnerType.ACTIVE, contribution: 65000000, withdrawals: 12000000, loans: 0, participation: 42 },
-      { name: "Socio Capital", type: PartnerType.PASSIVE, contribution: 90000000, withdrawals: 0, loans: 18000000, participation: 38 },
-      { name: "Socio Creativo", type: PartnerType.ACTIVE, contribution: 25000000, withdrawals: 6000000, loans: 0, participation: 20 }
     ]
   });
 

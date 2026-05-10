@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { motion } from "framer-motion";
-import { MessageSquare, Plus, Search, Trash2 } from "lucide-react";
+import { Archive, ChevronDown, MessageSquare, Plus, Search, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,11 +22,15 @@ type Task = {
   createdAt: string;
   phase: { id: string; name: string };
   assignee: { name: string | null; email: string } | null;
+  responsiblePartner: { id: string; name: string } | null;
   comments: { id: string; body: string; createdAt: string; user: { name: string | null } }[];
   attachments: { id: string; name: string; url: string; type: string }[];
+  archived: boolean;
+  archivedAt: string | null;
 };
 
 type Phase = { id: string; name: string };
+type Partner = { id: string; name: string };
 
 const statusLabels = {
   PENDING: "Pendiente",
@@ -35,29 +39,24 @@ const statusLabels = {
   COMPLETED: "Completado"
 };
 
-const priorityTone = {
-  LOW: "default",
-  MEDIUM: "blue",
-  HIGH: "amber",
-  CRITICAL: "red"
-} as const;
-
-export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; phases: Phase[] }) {
+export function TaskWorkspace({ initialTasks, phases, partners }: { initialTasks: Task[]; phases: Phase[]; partners: Partner[] }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [view, setView] = useState<"kanban" | "table">("kanban");
+  const [archiveView, setArchiveView] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [draft, setDraft] = useState({ title: "", description: "", phaseId: phases[0]?.id ?? "", priority: "MEDIUM" });
   const [comments, setComments] = useState<Record<string, string>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(
     () =>
       tasks.filter((task) => {
         const text = `${task.title} ${task.description} ${task.tags.join(" ")}`.toLowerCase();
-        return text.includes(query.toLowerCase()) && (status === "ALL" || task.status === status) && (priority === "ALL" || task.priority === priority);
+        return task.archived === archiveView && text.includes(query.toLowerCase()) && (status === "ALL" || task.status === status) && (priority === "ALL" || task.priority === priority);
       }),
-    [tasks, query, status, priority]
+    [tasks, query, status, priority, archiveView]
   );
 
   async function updateStatus(taskId: string, nextStatus: Task["status"]) {
@@ -78,6 +77,16 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
     });
   }
 
+  async function updateTask(taskId: string, patch: Partial<Task> & { responsiblePartnerId?: string | null }) {
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch)
+    });
+    const updated = await response.json();
+    setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, ...updated } : task)));
+  }
+
   async function addComment(taskId: string) {
     const body = comments[taskId]?.trim();
     if (!body) return;
@@ -94,6 +103,10 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
   async function deleteTask(taskId: string) {
     await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
     setTasks((current) => current.filter((task) => task.id !== taskId));
+  }
+
+  async function archiveTask(taskId: string) {
+    await updateTask(taskId, { archived: true });
   }
 
   async function onDragEnd(result: DropResult) {
@@ -126,6 +139,7 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
         <div className="flex gap-2">
           <Button variant={view === "kanban" ? "default" : "outline"} onClick={() => setView("kanban")}>Kanban</Button>
           <Button variant={view === "table" ? "default" : "outline"} onClick={() => setView("table")}>Tabla</Button>
+          <Button variant={archiveView ? "default" : "outline"} onClick={() => setArchiveView((value) => !value)}><Archive className="h-4 w-4" /> Archivadas</Button>
         </div>
       </section>
 
@@ -163,26 +177,36 @@ export function TaskWorkspace({ initialTasks, phases }: { initialTasks: Task[]; 
         </CardContent>
       </Card>
 
-      {view === "kanban" ? <Kanban tasks={filtered} onDragEnd={onDragEnd} updateProgress={updateProgress} deleteTask={deleteTask} comments={comments} setComments={setComments} addComment={addComment} /> : <TaskTable tasks={filtered} updateStatus={updateStatus} updateProgress={updateProgress} deleteTask={deleteTask} />}
+      {view === "kanban" ? <Kanban tasks={filtered} partners={partners} onDragEnd={onDragEnd} updateProgress={updateProgress} updateTask={updateTask} deleteTask={deleteTask} archiveTask={archiveTask} comments={comments} setComments={setComments} expanded={expanded} setExpanded={setExpanded} addComment={addComment} /> : <TaskTable tasks={filtered} partners={partners} updateStatus={updateStatus} updateProgress={updateProgress} updateTask={updateTask} deleteTask={deleteTask} archiveTask={archiveTask} />}
     </div>
   );
 }
 
 function Kanban({
   tasks,
+  partners,
   onDragEnd,
   updateProgress,
+  updateTask,
   deleteTask,
+  archiveTask,
   comments,
   setComments,
+  expanded,
+  setExpanded,
   addComment
 }: {
   tasks: Task[];
+  partners: Partner[];
   onDragEnd: (result: DropResult) => void;
   updateProgress: (id: string, progress: number) => void;
+  updateTask: (id: string, patch: Partial<Task> & { responsiblePartnerId?: string | null }) => void;
   deleteTask: (id: string) => void;
+  archiveTask: (id: string) => void;
   comments: Record<string, string>;
   setComments: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  expanded: Record<string, boolean>;
+  setExpanded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   addComment: (id: string) => void;
 }) {
   return (
@@ -201,19 +225,31 @@ function Kanban({
                           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-md border border-border bg-background/70 p-3 shadow-sm">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium">{task.title}</p>
-                            <Badge tone={priorityTone[task.priority]}>{task.priority}</Badge>
+                            <Select className="h-8 w-28" value={task.priority} onChange={(event) => updateTask(task.id, { priority: event.target.value as Task["priority"] })}>
+                              <option value="LOW">Baja</option>
+                              <option value="MEDIUM">Media</option>
+                              <option value="HIGH">Alta</option>
+                              <option value="CRITICAL">Critica</option>
+                            </Select>
                           </div>
-                          <p className="mt-2 text-xs text-muted-foreground">Responsable: {task.assignee?.name ?? task.assignee?.email ?? "Sin asignar"}</p>
+                          <Select className="mt-2 h-8" value={task.responsiblePartner?.id ?? ""} onChange={(event) => updateTask(task.id, { responsiblePartnerId: event.target.value || null })}>
+                            <option value="">Sin responsable</option>
+                            {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}
+                          </Select>
                           <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{task.description}</p>
                           <label className="mt-3 block text-xs text-muted-foreground">Avance {task.progress}%</label>
                           <input className="mt-1 w-full accent-red-600" type="range" min="0" max="100" value={task.progress} onChange={(event) => updateProgress(task.id, Number(event.target.value))} />
-                          <div className="mt-2 h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${task.progress}%` }} /></div>
                           <div className="mt-3 flex flex-wrap gap-1">{task.tags.map((tag) => <Badge key={tag}>{tag}</Badge>)}</div>
                           <div className="mt-3 rounded-md border border-border bg-card/50 p-2">
-                            <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground"><MessageSquare className="h-3 w-3" /> {task.comments.length} comentarios</div>
+                            <button className="mb-2 flex w-full items-center justify-between gap-2 text-xs text-muted-foreground" onClick={() => setExpanded((current) => ({ ...current, [task.id]: !current[task.id] }))}>
+                              <span className="flex items-center gap-2"><MessageSquare className="h-3 w-3" /> {task.comments.length} comentarios</span>
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                            {expanded[task.id] && <div className="mb-2 max-h-36 space-y-2 overflow-y-auto rounded-md bg-background/60 p-2">{task.comments.length ? task.comments.map((comment) => <div key={comment.id} className="border-b border-border pb-2 last:border-0 last:pb-0"><p className="text-xs text-foreground">{comment.body}</p><p className="mt-1 text-[10px] text-muted-foreground">{comment.user?.name ?? "Usuario"} · {new Date(comment.createdAt).toLocaleString("es-CO")}</p></div>) : <p className="text-xs text-muted-foreground">Sin comentarios.</p>}</div>}
                             <Input value={comments[task.id] ?? ""} onChange={(event) => setComments((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="Agregar comentario" />
                             <Button className="mt-2 w-full" size="sm" variant="secondary" onClick={() => addComment(task.id)}>Comentar</Button>
                           </div>
+                          {task.status === "COMPLETED" && !task.archived && <Button className="mt-3 w-full" size="sm" variant="secondary" onClick={() => archiveTask(task.id)}><Archive className="h-4 w-4" /> Archivar</Button>}
                           <Button className="mt-3 w-full" size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /> Eliminar</Button>
                           </motion.div>
                         </div>
@@ -231,7 +267,7 @@ function Kanban({
   );
 }
 
-function TaskTable({ tasks, updateStatus, updateProgress, deleteTask }: { tasks: Task[]; updateStatus: (id: string, status: Task["status"]) => void; updateProgress: (id: string, progress: number) => void; deleteTask: (id: string) => void }) {
+function TaskTable({ tasks, partners, updateStatus, updateProgress, updateTask, deleteTask, archiveTask }: { tasks: Task[]; partners: Partner[]; updateStatus: (id: string, status: Task["status"]) => void; updateProgress: (id: string, progress: number) => void; updateTask: (id: string, patch: Partial<Task> & { responsiblePartnerId?: string | null }) => void; deleteTask: (id: string) => void; archiveTask: (id: string) => void }) {
   return (
     <Card className="overflow-hidden bg-card/75 backdrop-blur">
       <div className="overflow-x-auto">
@@ -244,12 +280,12 @@ function TaskTable({ tasks, updateStatus, updateProgress, deleteTask }: { tasks:
               <tr key={task.id} className="border-t border-border">
                 <td className="p-3"><div className="font-medium">{task.title}</div><div className="text-xs text-muted-foreground">{task.description}</div></td>
                 <td>{task.phase.name}</td>
-                <td><Badge tone={priorityTone[task.priority]}>{task.priority}</Badge></td>
+                <td><Select value={task.priority} onChange={(e) => updateTask(task.id, { priority: e.target.value as Task["priority"] })}><option value="LOW">Baja</option><option value="MEDIUM">Media</option><option value="HIGH">Alta</option><option value="CRITICAL">Critica</option></Select></td>
                 <td><Select value={task.status} onChange={(e) => updateStatus(task.id, e.target.value as Task["status"])}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></td>
-                <td>{task.assignee?.name ?? task.assignee?.email ?? "Sin asignar"}</td>
+                <td><Select value={task.responsiblePartner?.id ?? ""} onChange={(e) => updateTask(task.id, { responsiblePartnerId: e.target.value || null })}><option value="">Sin responsable</option>{partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}</Select></td>
                 <td><Input type="number" min={0} max={100} value={task.progress} onChange={(e) => updateProgress(task.id, Number(e.target.value))} /></td>
                 <td>{task.comments.length}</td>
-                <td><Button size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /></Button></td>
+                <td className="flex gap-2 py-3">{task.status === "COMPLETED" && !task.archived && <Button size="sm" variant="secondary" onClick={() => archiveTask(task.id)}><Archive className="h-4 w-4" /></Button>}<Button size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /></Button></td>
               </tr>
             ))}
           </tbody>

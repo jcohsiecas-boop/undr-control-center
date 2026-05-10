@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       ...(status ? { status } : {}),
       ...(priority ? { priority } : {})
     },
-    include: { phase: true, assignee: true, comments: { include: { user: true }, orderBy: { createdAt: "desc" } }, attachments: true, activityLogs: { orderBy: { createdAt: "desc" } } },
+    include: { phase: true, assignee: true, responsiblePartner: true, comments: { include: { user: true }, orderBy: { createdAt: "desc" } }, attachments: true, activityLogs: { orderBy: { createdAt: "desc" } } },
     orderBy: [{ priority: "desc" }, { updatedAt: "desc" }]
   });
   return NextResponse.json(serialize(tasks));
@@ -36,9 +36,10 @@ export async function POST(request: Request) {
       progress: Number(body.progress ?? 0),
       tags: body.tags ?? [],
       phaseId: body.phaseId,
-      assigneeId: body.assigneeId ?? session!.user.id
+      assigneeId: body.assigneeId ?? session!.user.id,
+      responsiblePartnerId: body.responsiblePartnerId || null
     },
-    include: { phase: true, assignee: true }
+    include: { phase: true, assignee: true, responsiblePartner: true, comments: { include: { user: true } }, attachments: true }
   });
   await prisma.activityLog.create({ data: { action: "TASK_CREATED", taskId: task.id, userId: session!.user.id, metadata: { title: task.title } } });
   return NextResponse.json(serialize(task), { status: 201 });

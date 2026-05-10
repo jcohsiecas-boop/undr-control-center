@@ -8,7 +8,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const task = await prisma.task.findUnique({
     where: { id },
-    include: { phase: true, assignee: true, comments: { include: { user: true } }, attachments: true, activityLogs: { include: { user: true }, orderBy: { createdAt: "desc" } } }
+    include: { phase: true, assignee: true, responsiblePartner: true, comments: { include: { user: true } }, attachments: true, activityLogs: { include: { user: true }, orderBy: { createdAt: "desc" } } }
   });
   if (!task) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(serialize(task));
@@ -31,9 +31,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       tags: body.tags,
       phaseId: body.phaseId,
       assigneeId: body.assigneeId,
-      completedAt
+      completedAt,
+      archived: body.archived,
+      archivedAt: body.archived === true ? new Date() : body.archived === false ? null : undefined,
+      responsiblePartnerId: body.responsiblePartnerId === undefined ? undefined : body.responsiblePartnerId || null
     },
-    include: { phase: true, assignee: true }
+    include: { phase: true, assignee: true, responsiblePartner: true, comments: { include: { user: true } }, attachments: true }
   });
   await prisma.activityLog.create({ data: { action: "TASK_UPDATED", taskId: id, userId: session!.user.id, metadata: body } });
   return NextResponse.json(serialize(task));

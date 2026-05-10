@@ -154,17 +154,22 @@ model Task {
   tags          String[]      @default([])
   createdAt     DateTime      @default(now())
   completedAt   DateTime?
+  archived      Boolean       @default(false)
+  archivedAt    DateTime?
   updatedAt     DateTime      @updatedAt
   phaseId       String
   assigneeId    String?
+  responsiblePartnerId String?
   phase         Phase         @relation(fields: [phaseId], references: [id])
   assignee      User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  responsiblePartner Partner? @relation(fields: [responsiblePartnerId], references: [id], onDelete: SetNull)
   comments      Comment[]
   attachments   Attachment[]
   activityLogs  ActivityLog[]
 
   @@index([status, priority])
   @@index([phaseId])
+  @@index([responsiblePartnerId])
   @@map("tasks")
 }
 
@@ -266,6 +271,7 @@ model Partner {
   participation Decimal     @db.Decimal(5, 2)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  tasks         Task[]
 
   @@map("partners")
 }

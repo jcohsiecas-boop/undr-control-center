@@ -7,11 +7,13 @@ export default async function TasksPage() {
     include: {
       phase: true,
       assignee: true,
+      responsiblePartner: true,
       comments: { include: { user: true }, orderBy: { createdAt: "desc" } },
       attachments: true
     },
     orderBy: { updatedAt: "desc" }
   });
   const phases = await prisma.phase.findMany({ orderBy: { order: "asc" } });
-  return <TaskWorkspace initialTasks={serialize(tasks)} phases={serialize(phases)} />;
+  const partners = await prisma.partner.findMany({ orderBy: { name: "asc" } });
+  return <TaskWorkspace initialTasks={serialize(tasks)} phases={serialize(phases)} partners={serialize(partners)} />;
 }
