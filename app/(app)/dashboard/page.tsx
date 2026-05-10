@@ -19,13 +19,15 @@ export default async function DashboardPage() {
   const completed = tasks.filter((task) => task.status === "COMPLETED").length;
   const pending = tasks.filter((task) => task.status !== "COMPLETED").length;
   const critical = tasks.filter((task) => task.priority === "CRITICAL" && task.status !== "COMPLETED").length;
-  const income = records.filter((r) => r.type === "INCOME").reduce((sum, r) => sum + Number(r.amount), 0);
-  const expenses = records.filter((r) => r.type === "EXPENSE").reduce((sum, r) => sum + Number(r.amount), 0);
+  const income = records.filter((r) => r.type === "INCOME").reduce((sum, r) => sum + Number(r.paidAmount ?? r.amount), 0);
+  const expenses = records.filter((r) => r.type === "EXPENSE").reduce((sum, r) => sum + Number(r.paidAmount ?? r.amount), 0);
+  const projectedIncome = records.filter((r) => r.type === "INCOME").reduce((sum, r) => sum + Number(r.amount), 0);
+  const projectedExpenses = records.filter((r) => r.type === "EXPENSE").reduce((sum, r) => sum + Number(r.amount), 0);
   const flow = Object.values(
     records.reduce<Record<string, { month: string; income: number; expenses: number }>>((acc, record) => {
       const month = record.month.toISOString().slice(0, 7);
       acc[month] ??= { month, income: 0, expenses: 0 };
-      acc[month][record.type === "INCOME" ? "income" : "expenses"] += Number(record.amount);
+      acc[month][record.type === "INCOME" ? "income" : "expenses"] += Number(record.paidAmount ?? record.amount);
       return acc;
     }, {})
   );
@@ -42,11 +44,11 @@ export default async function DashboardPage() {
         <MetricCard href="/tasks" label="Progreso general" value={`${Math.round((completed / total) * 100)}%`} hint={`${completed} tareas completadas de ${tasks.length}`} icon={TrendingUp} />
         <MetricCard href="/tasks" label="Pendientes" value={`${pending}`} hint="Checklist ejecutivo abierto" icon={ClipboardList} />
         <MetricCard href="/tasks" label="Criticas" value={`${critical}`} hint="Requieren desbloqueo" icon={AlertTriangle} />
-        <MetricCard href="/financial" label="Utilidad neta" value={money(income - expenses)} hint="Real + proyectada registrada" icon={CircleDollarSign} />
+        <MetricCard href="/financial" label="Utilidad real" value={money(income - expenses)} hint="Solo cobros y pagos reales" icon={CircleDollarSign} />
         <MetricCard href="/events" label="Eventos" value={`${events.length}`} hint="Eventos en control financiero" icon={CalendarDays} />
         <MetricCard href="/partners" label="Socios" value={`${partners.length}`} hint="Participacion y aportes" icon={Users} />
         <MetricCard href="/inventory" label="Activos" value={`${inventory.length}`} hint="Inventario trazable" icon={Package} />
-        <MetricCard href="/tasks" label="Tareas cerradas" value={`${completed}`} hint="Evidencia lista para auditoria" icon={CheckCircle2} />
+        <MetricCard href="/financial" label="Utilidad proyectada" value={money(projectedIncome - projectedExpenses)} hint="Devengado total registrado" icon={CheckCircle2} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">

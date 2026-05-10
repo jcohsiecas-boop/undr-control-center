@@ -75,6 +75,7 @@ export function FinancialWorkspace({
   const [categories, setCategories] = useState(initialCategories);
   const [showBankForm, setShowBankForm] = useState(false);
   const [chartFilters, setChartFilters] = useState({ bankAccountId: "ALL", from: "", to: "" });
+  const [tableFilter, setTableFilter] = useState("ACTIVE");
   const [paymentDrafts, setPaymentDrafts] = useState<Record<string, { amount: string; bankAccountId: string; note: string }>>({});
   const [categoryDraft, setCategoryDraft] = useState("");
   const [recordDraft, setRecordDraft] = useState({
@@ -93,6 +94,12 @@ export function FinancialWorkspace({
   const [accountDraft, setAccountDraft] = useState({ name: "", bank: "", accountNo: "", balance: "" });
 
   const visibleCategories = categories.filter((category) => category.type === recordDraft.type);
+  const tableRecords = records.filter((record) => {
+    if (tableFilter === "PROJECTED") return record.documentStatus === "PROJECTED";
+    if (tableFilter === "REAL") return Number(record.paidAmount) > 0;
+    if (tableFilter === "CANCELLED") return ["CANCELLED", "VOID"].includes(record.documentStatus);
+    return !["CANCELLED", "VOID"].includes(record.documentStatus);
+  });
   const receivables = records.filter((r) => r.type === "INCOME" && Number(r.pendingBalance) > 0 && !["VOID", "CANCELLED"].includes(r.documentStatus));
   const payables = records.filter((r) => r.type === "EXPENSE" && Number(r.pendingBalance) > 0 && !["VOID", "CANCELLED"].includes(r.documentStatus));
 
@@ -260,9 +267,18 @@ export function FinancialWorkspace({
       <ReceivableTable title="Cuentas por pagar" records={payables} accounts={accounts} paymentDrafts={paymentDrafts} setPaymentDrafts={setPaymentDrafts} addPayment={addPayment} cancelRecord={deleteRecord} />
 
       <Card className="overflow-hidden bg-card/75">
+        <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+          <h2 className="text-sm font-semibold">Movimientos financieros</h2>
+          <Select className="w-full md:w-64" value={tableFilter} onChange={(event) => setTableFilter(event.target.value)}>
+            <option value="ACTIVE">Activos</option>
+            <option value="PROJECTED">Solo proyectados</option>
+            <option value="REAL">Con pago/cobro real</option>
+            <option value="CANCELLED">Anulados / cancelados</option>
+          </Select>
+        </div>
         <table className="w-full min-w-[1300px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Fecha</th><th>Tipo</th><th>Categoria</th><th>Descripcion</th><th>Monto</th><th>Doc.</th><th>Pago</th><th>Pagado</th><th>Pendiente</th><th>Vence</th><th>Responsable</th><th></th></tr></thead>
-          <tbody>{records.map((record) => <tr key={record.id} className="border-t border-border"><td className="p-3">{new Date(record.month).toISOString().slice(0, 10)}</td><td>{record.type === "INCOME" ? "Ingreso" : "Egreso"}</td><td>{record.category}</td><td>{record.description}</td><td>{money(Number(record.amount))}</td><td><Select value={record.documentStatus} onChange={(e) => updateRecord(record.id, { documentStatus: e.target.value as DocumentStatus })}>{(record.type === "INCOME" ? incomeStatuses : expenseStatuses).map((status) => <option key={status} value={status}>{statusLabel[status]}</option>)}</Select></td><td><Badge tone={record.paymentStatus === "SETTLED" ? "green" : record.paymentStatus === "PARTIAL" ? "amber" : "red"}>{statusLabel[record.paymentStatus]}</Badge></td><td>{money(Number(record.paidAmount))}</td><td>{money(Number(record.pendingBalance))}</td><td>{record.dueDate ? new Date(record.dueDate).toISOString().slice(0, 10) : "-"}</td><td>{record.responsible ?? "-"}</td><td><Button size="sm" variant="outline" onClick={() => deleteRecord(record.id)}><Trash2 className="h-4 w-4" /> Eliminar</Button></td></tr>)}</tbody>
+          <tbody>{tableRecords.map((record) => <tr key={record.id} className="border-t border-border"><td className="p-3">{new Date(record.month).toISOString().slice(0, 10)}</td><td>{record.type === "INCOME" ? "Ingreso" : "Egreso"}</td><td>{record.category}</td><td>{record.description}</td><td>{money(Number(record.amount))}</td><td><Select value={record.documentStatus} onChange={(e) => updateRecord(record.id, { documentStatus: e.target.value as DocumentStatus })}>{(record.type === "INCOME" ? incomeStatuses : expenseStatuses).map((status) => <option key={status} value={status}>{statusLabel[status]}</option>)}</Select></td><td><Badge tone={record.paymentStatus === "SETTLED" ? "green" : record.paymentStatus === "PARTIAL" ? "amber" : "red"}>{statusLabel[record.paymentStatus]}</Badge></td><td>{money(Number(record.paidAmount))}</td><td>{money(Number(record.pendingBalance))}</td><td>{record.dueDate ? new Date(record.dueDate).toISOString().slice(0, 10) : "-"}</td><td>{record.responsible ?? "-"}</td><td><Button size="sm" variant="outline" onClick={() => deleteRecord(record.id)}><Trash2 className="h-4 w-4" /> Eliminar</Button></td></tr>)}</tbody>
         </table>
       </Card>
     </div>
