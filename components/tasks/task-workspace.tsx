@@ -225,14 +225,14 @@ function Kanban({
                           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-md border border-border bg-background/70 p-3 shadow-sm">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium">{task.title}</p>
-                            <Select className="h-8 w-28" value={task.priority} onChange={(event) => updateTask(task.id, { priority: event.target.value as Task["priority"] })}>
+                            <Select className="h-8 w-32 shrink-0" value={task.priority} onChange={(event) => updateTask(task.id, { priority: event.target.value as Task["priority"] })}>
                               <option value="LOW">Baja</option>
                               <option value="MEDIUM">Media</option>
                               <option value="HIGH">Alta</option>
                               <option value="CRITICAL">Critica</option>
                             </Select>
                           </div>
-                          <Select className="mt-2 h-8" value={task.responsiblePartner?.id ?? ""} onChange={(event) => updateTask(task.id, { responsiblePartnerId: event.target.value || null })}>
+                          <Select className="mt-2 h-9 w-full min-w-0 text-xs" value={task.responsiblePartner?.id ?? ""} onChange={(event) => updateTask(task.id, { responsiblePartnerId: event.target.value || null })}>
                             <option value="">Sin responsable</option>
                             {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}
                           </Select>
@@ -249,7 +249,7 @@ function Kanban({
                             <Input value={comments[task.id] ?? ""} onChange={(event) => setComments((current) => ({ ...current, [task.id]: event.target.value }))} placeholder="Agregar comentario" />
                             <Button className="mt-2 w-full" size="sm" variant="secondary" onClick={() => addComment(task.id)}>Comentar</Button>
                           </div>
-                          {task.status === "COMPLETED" && !task.archived && <Button className="mt-3 w-full" size="sm" variant="secondary" onClick={() => archiveTask(task.id)}><Archive className="h-4 w-4" /> Archivar</Button>}
+                          {!task.archived && <Button className="mt-3 w-full" size="sm" variant="secondary" onClick={() => archiveTask(task.id)}><Archive className="h-4 w-4" /> Archivar</Button>}
                           <Button className="mt-3 w-full" size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /> Eliminar</Button>
                           </motion.div>
                         </div>
@@ -285,7 +285,7 @@ function TaskTable({ tasks, partners, updateStatus, updateProgress, updateTask, 
                 <td><Select value={task.responsiblePartner?.id ?? ""} onChange={(e) => updateTask(task.id, { responsiblePartnerId: e.target.value || null })}><option value="">Sin responsable</option>{partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}</Select></td>
                 <td><Input type="number" min={0} max={100} value={task.progress} onChange={(e) => updateProgress(task.id, Number(e.target.value))} /></td>
                 <td>{task.comments.length}</td>
-                <td className="flex gap-2 py-3">{task.status === "COMPLETED" && !task.archived && <Button size="sm" variant="secondary" onClick={() => archiveTask(task.id)}><Archive className="h-4 w-4" /></Button>}<Button size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /></Button></td>
+                <td className="flex gap-2 py-3">{!task.archived && <Button size="sm" variant="secondary" onClick={() => archiveTask(task.id)}><Archive className="h-4 w-4" /></Button>}<Button size="sm" variant="outline" onClick={() => deleteTask(task.id)}><Trash2 className="h-4 w-4" /></Button></td>
               </tr>
             ))}
           </tbody>

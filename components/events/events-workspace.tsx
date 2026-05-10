@@ -63,6 +63,27 @@ export function EventsWorkspace({ initialEvents }: { initialEvents: EventItem[] 
     setEvents((current) => current.map((event) => ({ ...event, lineItems: event.lineItems.filter((line) => line.id !== id) })));
   }
 
+  async function sendLineToFinance(line: Line) {
+    if (!selected) return;
+    const isIncome = line.type === "INCOME" || line.type === "SPONSOR";
+    await fetch("/api/financial", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: isIncome ? "INCOME" : "EXPENSE",
+        category: line.type === "SPONSOR" ? "Patrocinio" : line.type === "PERSONNEL" ? "Personal" : isIncome ? "Ingreso evento" : "Gasto evento",
+        description: `${selected.name} - ${line.concept || line.type}`,
+        amount: Number(line.actual || line.projected || 0),
+        month: selected.date,
+        dueDate: selected.date,
+        documentStatus: isIncome ? "INVOICED" : "COMMITTED",
+        responsible: line.responsible || null,
+        eventId: selected.id,
+        taxType: "NONE"
+      })
+    });
+  }
+
   return (
     <div className="space-y-6">
       <section><Badge tone="red">Eventos</Badge><h1 className="mt-3 text-3xl font-semibold">Presupuesto, real, gastos y personal</h1></section>
@@ -103,7 +124,7 @@ export function EventsWorkspace({ initialEvents }: { initialEvents: EventItem[] 
                 <Button>Agregar</Button>
               </form>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-sm"><thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Tipo</th><th>Concepto</th><th>Cant.</th><th>Unit.</th><th>Proyectado</th><th>Real</th><th>Responsable</th><th></th></tr></thead><tbody>{lines.map((line) => <tr key={line.id} className="border-t border-border"><td className="p-3">{line.type}</td><td>{line.concept}</td><td>{line.quantity}</td><td>{money(Number(line.unitCost))}</td><td>{money(Number(line.projected))}</td><td>{money(Number(line.actual))}</td><td>{line.responsible}</td><td><Button size="sm" variant="outline" onClick={() => deleteLine(line.id)}><Trash2 className="h-4 w-4" /></Button></td></tr>)}</tbody></table>
+                <table className="w-full min-w-[1000px] text-sm"><thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Tipo</th><th>Concepto</th><th>Cant.</th><th>Unit.</th><th>Proyectado</th><th>Real</th><th>Responsable</th><th>Finanzas</th><th></th></tr></thead><tbody>{lines.map((line) => <tr key={line.id} className="border-t border-border"><td className="p-3">{line.type}</td><td>{line.concept}</td><td>{line.quantity}</td><td>{money(Number(line.unitCost))}</td><td>{money(Number(line.projected))}</td><td>{money(Number(line.actual))}</td><td>{line.responsible}</td><td><Button size="sm" variant="secondary" onClick={() => sendLineToFinance(line)}>{line.type === "INCOME" || line.type === "SPONSOR" ? "Por cobrar" : "Por pagar"}</Button></td><td><Button size="sm" variant="outline" onClick={() => deleteLine(line.id)}><Trash2 className="h-4 w-4" /></Button></td></tr>)}</tbody></table>
               </div>
             </>
           ) : <p className="text-sm text-muted-foreground">Crea o selecciona un evento.</p>}

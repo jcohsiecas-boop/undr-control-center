@@ -42,6 +42,22 @@ type FinancialRecord = {
 
 const incomeStatuses: DocumentStatus[] = ["PROJECTED", "CONFIRMED", "INVOICED", "PARTIALLY_COLLECTED", "COLLECTED", "VOID"];
 const expenseStatuses: DocumentStatus[] = ["PROJECTED", "APPROVED", "COMMITTED", "PARTIALLY_PAID", "PAID", "CANCELLED"];
+const statusLabel: Record<DocumentStatus | PaymentStatus, string> = {
+  PROJECTED: "Proyectado",
+  CONFIRMED: "Confirmado",
+  INVOICED: "Facturado",
+  PARTIALLY_COLLECTED: "Parcialmente cobrado",
+  COLLECTED: "Cobrado",
+  VOID: "Anulado",
+  APPROVED: "Aprobado",
+  COMMITTED: "Comprometido",
+  PARTIALLY_PAID: "Parcialmente pagado",
+  PAID: "Pagado",
+  CANCELLED: "Cancelado",
+  PENDING: "Pendiente",
+  PARTIAL: "Parcial",
+  SETTLED: "Liquidado"
+};
 
 export function FinancialWorkspace({
   initialRecords,
@@ -203,7 +219,7 @@ export function FinancialWorkspace({
           <Input type="number" placeholder="Monto" value={recordDraft.amount} onChange={(e) => setRecordDraft({ ...recordDraft, amount: e.target.value })} />
           <Input type="date" value={recordDraft.month} onChange={(e) => setRecordDraft({ ...recordDraft, month: e.target.value })} />
           <Input type="date" value={recordDraft.dueDate} onChange={(e) => setRecordDraft({ ...recordDraft, dueDate: e.target.value })} />
-          <Select value={recordDraft.documentStatus} onChange={(e) => setRecordDraft({ ...recordDraft, documentStatus: e.target.value as DocumentStatus })}>{(recordDraft.type === "INCOME" ? incomeStatuses : expenseStatuses).map((status) => <option key={status} value={status}>{status}</option>)}</Select>
+          <Select value={recordDraft.documentStatus} onChange={(e) => setRecordDraft({ ...recordDraft, documentStatus: e.target.value as DocumentStatus })}>{(recordDraft.type === "INCOME" ? incomeStatuses : expenseStatuses).map((status) => <option key={status} value={status}>{statusLabel[status]}</option>)}</Select>
           <Select value={recordDraft.taxType} onChange={(e) => setRecordDraft({ ...recordDraft, taxType: e.target.value })}><option value="NONE">Sin impuesto</option><option value="IVA">IVA</option><option value="RENTA">Renta</option></Select>
           <Select value={recordDraft.eventId} onChange={(e) => setRecordDraft({ ...recordDraft, eventId: e.target.value })}><option value="">Sin evento</option>{events.map((event) => <option key={event.id} value={event.id}>{event.name}</option>)}</Select>
           <Input placeholder="Responsable" value={recordDraft.responsible} onChange={(e) => setRecordDraft({ ...recordDraft, responsible: e.target.value })} />
@@ -221,26 +237,26 @@ export function FinancialWorkspace({
         <CashFlowChart data={flow} />
       </section>
 
-      <ReceivableTable title="Cuentas por cobrar" records={receivables} accounts={accounts} paymentDrafts={paymentDrafts} setPaymentDrafts={setPaymentDrafts} addPayment={addPayment} />
-      <ReceivableTable title="Cuentas por pagar" records={payables} accounts={accounts} paymentDrafts={paymentDrafts} setPaymentDrafts={setPaymentDrafts} addPayment={addPayment} />
+      <ReceivableTable title="Cuentas por cobrar" records={receivables} accounts={accounts} paymentDrafts={paymentDrafts} setPaymentDrafts={setPaymentDrafts} addPayment={addPayment} cancelRecord={deleteRecord} />
+      <ReceivableTable title="Cuentas por pagar" records={payables} accounts={accounts} paymentDrafts={paymentDrafts} setPaymentDrafts={setPaymentDrafts} addPayment={addPayment} cancelRecord={deleteRecord} />
 
       <Card className="overflow-hidden bg-card/75">
         <table className="w-full min-w-[1300px] text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Fecha</th><th>Tipo</th><th>Categoria</th><th>Descripcion</th><th>Monto</th><th>Doc.</th><th>Pago</th><th>Pagado</th><th>Pendiente</th><th>Vence</th><th>Responsable</th><th></th></tr></thead>
-          <tbody>{records.map((record) => <tr key={record.id} className="border-t border-border"><td className="p-3">{new Date(record.month).toISOString().slice(0, 10)}</td><td>{record.type === "INCOME" ? "Ingreso" : "Egreso"}</td><td>{record.category}</td><td>{record.description}</td><td>{money(Number(record.amount))}</td><td><Select value={record.documentStatus} onChange={(e) => updateRecord(record.id, { documentStatus: e.target.value as DocumentStatus })}>{(record.type === "INCOME" ? incomeStatuses : expenseStatuses).map((status) => <option key={status} value={status}>{status}</option>)}</Select></td><td><Badge tone={record.paymentStatus === "SETTLED" ? "green" : record.paymentStatus === "PARTIAL" ? "amber" : "red"}>{record.paymentStatus}</Badge></td><td>{money(Number(record.paidAmount))}</td><td>{money(Number(record.pendingBalance))}</td><td>{record.dueDate ? new Date(record.dueDate).toISOString().slice(0, 10) : "-"}</td><td>{record.responsible ?? "-"}</td><td><Button size="sm" variant="outline" onClick={() => deleteRecord(record.id)}><Trash2 className="h-4 w-4" /></Button></td></tr>)}</tbody>
+          <tbody>{records.map((record) => <tr key={record.id} className="border-t border-border"><td className="p-3">{new Date(record.month).toISOString().slice(0, 10)}</td><td>{record.type === "INCOME" ? "Ingreso" : "Egreso"}</td><td>{record.category}</td><td>{record.description}</td><td>{money(Number(record.amount))}</td><td><Select value={record.documentStatus} onChange={(e) => updateRecord(record.id, { documentStatus: e.target.value as DocumentStatus })}>{(record.type === "INCOME" ? incomeStatuses : expenseStatuses).map((status) => <option key={status} value={status}>{statusLabel[status]}</option>)}</Select></td><td><Badge tone={record.paymentStatus === "SETTLED" ? "green" : record.paymentStatus === "PARTIAL" ? "amber" : "red"}>{statusLabel[record.paymentStatus]}</Badge></td><td>{money(Number(record.paidAmount))}</td><td>{money(Number(record.pendingBalance))}</td><td>{record.dueDate ? new Date(record.dueDate).toISOString().slice(0, 10) : "-"}</td><td>{record.responsible ?? "-"}</td><td><Button size="sm" variant="outline" onClick={() => deleteRecord(record.id)}><Trash2 className="h-4 w-4" /></Button></td></tr>)}</tbody>
         </table>
       </Card>
     </div>
   );
 }
 
-function ReceivableTable({ title, records, accounts, paymentDrafts, setPaymentDrafts, addPayment }: { title: string; records: FinancialRecord[]; accounts: BankAccount[]; paymentDrafts: Record<string, { amount: string; bankAccountId: string; note: string }>; setPaymentDrafts: React.Dispatch<React.SetStateAction<Record<string, { amount: string; bankAccountId: string; note: string }>>>; addPayment: (record: FinancialRecord) => void }) {
+function ReceivableTable({ title, records, accounts, paymentDrafts, setPaymentDrafts, addPayment, cancelRecord }: { title: string; records: FinancialRecord[]; accounts: BankAccount[]; paymentDrafts: Record<string, { amount: string; bankAccountId: string; note: string }>; setPaymentDrafts: React.Dispatch<React.SetStateAction<Record<string, { amount: string; bankAccountId: string; note: string }>>>; addPayment: (record: FinancialRecord) => void; cancelRecord: (id: string) => void }) {
   return (
     <Card className="overflow-hidden bg-card/75">
       <div className="flex items-center justify-between p-4"><h2 className="text-sm font-semibold">{title}</h2><Badge tone="amber">{money(records.reduce((sum, record) => sum + Number(record.pendingBalance), 0))}</Badge></div>
       <table className="w-full min-w-[1100px] text-sm">
-        <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Fecha</th><th>Responsable</th><th>Evento</th><th>Monto</th><th>Pendiente</th><th>Dias vencidos</th><th>Estado</th><th>Registrar pago/cobro</th></tr></thead>
-        <tbody>{records.map((record) => { const overdue = record.dueDate ? Math.max(Math.floor((Date.now() - new Date(record.dueDate).getTime()) / 86400000), 0) : 0; const draft = paymentDrafts[record.id] ?? { amount: "", bankAccountId: "", note: "" }; return <tr key={record.id} className="border-t border-border"><td className="p-3">{new Date(record.month).toISOString().slice(0, 10)}</td><td>{record.responsible ?? "-"}</td><td>{record.event?.name ?? "-"}</td><td>{money(Number(record.amount))}</td><td>{money(Number(record.pendingBalance))}</td><td>{overdue}</td><td><Badge tone={record.paymentStatus === "PARTIAL" ? "amber" : "red"}>{record.documentStatus}</Badge></td><td><div className="grid min-w-[420px] grid-cols-[1fr_1fr_auto] gap-2"><Input type="number" placeholder="Monto" value={draft.amount} onChange={(e) => setPaymentDrafts((current) => ({ ...current, [record.id]: { ...draft, amount: e.target.value } }))} /><Select value={draft.bankAccountId} onChange={(e) => setPaymentDrafts((current) => ({ ...current, [record.id]: { ...draft, bankAccountId: e.target.value } }))}><option value="">Cuenta</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</Select><Button size="sm" onClick={() => addPayment(record)}>Aplicar</Button></div></td></tr>; })}</tbody>
+        <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground"><tr><th className="p-3">Fecha</th><th>Responsable</th><th>Evento</th><th>Monto</th><th>Pendiente</th><th>Dias vencidos</th><th>Estado</th><th>Registrar pago/cobro</th><th></th></tr></thead>
+        <tbody>{records.map((record) => { const overdue = record.dueDate ? Math.max(Math.floor((Date.now() - new Date(record.dueDate).getTime()) / 86400000), 0) : 0; const draft = paymentDrafts[record.id] ?? { amount: "", bankAccountId: "", note: "" }; return <tr key={record.id} className="border-t border-border"><td className="p-3">{new Date(record.month).toISOString().slice(0, 10)}</td><td>{record.responsible ?? "-"}</td><td>{record.event?.name ?? "-"}</td><td>{money(Number(record.amount))}</td><td>{money(Number(record.pendingBalance))}</td><td>{overdue}</td><td><Badge tone={record.paymentStatus === "PARTIAL" ? "amber" : "red"}>{statusLabel[record.documentStatus]}</Badge></td><td><div className="grid min-w-[420px] grid-cols-[1fr_1fr_auto] gap-2"><Input type="number" placeholder="Monto" value={draft.amount} onChange={(e) => setPaymentDrafts((current) => ({ ...current, [record.id]: { ...draft, amount: e.target.value } }))} /><Select value={draft.bankAccountId} onChange={(e) => setPaymentDrafts((current) => ({ ...current, [record.id]: { ...draft, bankAccountId: e.target.value } }))}><option value="">Cuenta</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</Select><Button size="sm" onClick={() => addPayment(record)}>Aplicar</Button></div></td><td><Button size="sm" variant="outline" onClick={() => cancelRecord(record.id)}><Trash2 className="h-4 w-4" /></Button></td></tr>; })}</tbody>
       </table>
     </Card>
   );
