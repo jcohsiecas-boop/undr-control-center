@@ -93,6 +93,13 @@ enum EventLineType {
   SPONSOR
 }
 
+enum EventStatus {
+  PLANNING
+  ACTIVE
+  CLOSED
+  CANCELLED
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -148,6 +155,7 @@ model User {
   activityLogs  ActivityLog[]
   attachments   Attachment[]
   inventory     Inventory[]
+  eventLineActions EventLineItem[] @relation("EventLineActionedBy")
 
   @@map("users")
 }
@@ -236,9 +244,11 @@ model ActivityLog {
 model Event {
   id            String         @id @default(cuid())
   eventId       String         @unique
+  slug          String         @unique
   name          String
   date          DateTime
   budget        Decimal        @db.Decimal(14, 2)
+  status        EventStatus    @default(PLANNING)
   sponsors      String[]       @default([])
   attendees     Int            @default(0)
   createdAt     DateTime       @default(now())
@@ -261,11 +271,17 @@ model EventLineItem {
   projected   Decimal       @db.Decimal(14, 2)
   actual      Decimal       @db.Decimal(14, 2)
   paid        Boolean       @default(false)
+  financialStatus PaymentStatus @default(PENDING)
+  actionedById String?
+  actionedBy   User?        @relation("EventLineActionedBy", fields: [actionedById], references: [id], onDelete: SetNull)
+  actionedAt   DateTime?
   responsible String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([eventId, type])
+  @@index([financialStatus])
+  @@index([actionedById])
   @@map("event_line_items")
 }
 

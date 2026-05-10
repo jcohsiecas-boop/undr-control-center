@@ -158,9 +158,11 @@ async function main() {
   const event = await prisma.event.create({
     data: {
       eventId: "UNDR-2026-Q2-001",
+      slug: "undr-warehouse-session",
       name: "UNDR Warehouse Session",
       date: new Date("2026-06-20"),
       budget: 145000000,
+      status: "PLANNING",
       sponsors: ["Redline Energy", "Nocturne Audio"],
       attendees: 1800
     }
@@ -170,10 +172,10 @@ async function main() {
   });
   await prisma.eventLineItem.createMany({
     data: [
-      { eventId: event.id, type: EventLineType.EXPENSE, concept: "Alquiler de local", quantity: 1, unitCost: 14500000, projected: 14500000, actual: 14500000, paid: true, responsible: "Operacion" },
-      { eventId: event.id, type: EventLineType.PERSONNEL, concept: "DJs y staff", quantity: 8, unitCost: 1200000, projected: 9600000, actual: 11200000, paid: true, responsible: "Produccion" },
-      { eventId: event.id, type: EventLineType.INCOME, concept: "Venta de entradas", quantity: 1800, unitCost: 85000, projected: 153000000, actual: 166000000, paid: true, responsible: "Ticketing" },
-      { eventId: event.id, type: EventLineType.SPONSOR, concept: "Patrocinios", quantity: 2, unitCost: 36000000, projected: 72000000, actual: 72000000, paid: true, responsible: "Comercial" }
+      { eventId: event.id, type: EventLineType.EXPENSE, concept: "Alquiler de local", quantity: 1, unitCost: 14500000, projected: 14500000, actual: 14500000, paid: true, financialStatus: "SETTLED", actionedById: admin.id, actionedAt: new Date(), responsible: "Operacion" },
+      { eventId: event.id, type: EventLineType.PERSONNEL, concept: "DJs y staff", quantity: 8, unitCost: 1200000, projected: 9600000, actual: 11200000, paid: true, financialStatus: "SETTLED", actionedById: admin.id, actionedAt: new Date(), responsible: "Produccion" },
+      { eventId: event.id, type: EventLineType.INCOME, concept: "Venta de entradas", quantity: 1800, unitCost: 85000, projected: 153000000, actual: 166000000, paid: true, financialStatus: "SETTLED", actionedById: admin.id, actionedAt: new Date(), responsible: "Ticketing" },
+      { eventId: event.id, type: EventLineType.SPONSOR, concept: "Patrocinios", quantity: 2, unitCost: 36000000, projected: 72000000, actual: 72000000, paid: true, financialStatus: "SETTLED", actionedById: admin.id, actionedAt: new Date(), responsible: "Comercial" }
     ]
   });
 
