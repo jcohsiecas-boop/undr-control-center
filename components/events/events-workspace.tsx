@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CalendarDays, DoorOpen, Plus } from "lucide-react";
+import { CalendarDays, DoorOpen, Plus, Trash2 } from "lucide-react";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,11 @@ export function EventsWorkspace({ initialEvents }: { initialEvents: EventItem[] 
     const created = await response.json();
     setEvents((current) => [{ ...created, lineItems: [] }, ...current]);
     setEventDraft({ eventId: "", name: "", date: new Date().toISOString().slice(0, 10), budget: "", status: "PLANNING" });
+  }
+
+  async function deleteEvent(id: string) {
+    await fetch(`/api/events/${id}`, { method: "DELETE" });
+    setEvents((current) => current.filter((event) => event.id !== id));
   }
 
   const actualIncome = events.reduce((sum, event) => sum + event.lineItems.filter((line) => line.type === "INCOME" || line.type === "SPONSOR").reduce((s, l) => s + Number(l.actual), 0), 0);
@@ -72,7 +77,10 @@ export function EventsWorkspace({ initialEvents }: { initialEvents: EventItem[] 
                 <div><p className="text-xs text-muted-foreground">Pendientes</p><p className="font-medium">{pending}</p></div>
                 <div><p className="text-xs text-muted-foreground">EVENT_ID</p><p className="font-mono text-xs">{event.eventId}</p></div>
               </div>
-              <Button className="mt-5 w-full" asChild><Link href={`/events/${event.slug}`}><DoorOpen className="h-4 w-4" /> Entrar</Link></Button>
+              <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
+                <Button asChild><Link href={`/events/${event.slug}`}><DoorOpen className="h-4 w-4" /> Entrar</Link></Button>
+                <Button variant="outline" size="icon" aria-label="Eliminar evento" onClick={() => deleteEvent(event.id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
             </Card>
           );
         })}
