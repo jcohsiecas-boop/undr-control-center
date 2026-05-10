@@ -60,6 +60,26 @@ enum InvoiceStatus {
   VOID
 }
 
+enum DocumentStatus {
+  PROJECTED
+  CONFIRMED
+  INVOICED
+  PARTIALLY_COLLECTED
+  COLLECTED
+  VOID
+  APPROVED
+  COMMITTED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  SETTLED
+}
+
 enum TaxType {
   NONE
   IVA
@@ -225,6 +245,7 @@ model Event {
   updatedAt     DateTime       @updatedAt
   eventFinances EventFinance[]
   lineItems     EventLineItem[]
+  financialRecords FinancialRecord[]
 
   @@map("events")
 }
@@ -302,16 +323,53 @@ model FinancialRecord {
   month       DateTime
   projected   Boolean       @default(false)
   invoiceStatus InvoiceStatus @default(PAID)
+  documentStatus DocumentStatus @default(PROJECTED)
+  paymentStatus PaymentStatus @default(PENDING)
+  paidAmount  Decimal       @default(0) @db.Decimal(14, 2)
+  pendingBalance Decimal    @default(0) @db.Decimal(14, 2)
+  dueDate     DateTime?
+  responsible String?
+  eventId     String?
+  event       Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  deletedAt   DateTime?
   taxType     TaxType       @default(NONE)
   taxPaid     Boolean       @default(false)
   bankAccountId String?
   bankAccount BankAccount?  @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+  payments    MovementPayment[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([type, month])
   @@index([bankAccountId])
+  @@index([eventId])
   @@map("financial_records")
+}
+
+model MovementPayment {
+  id          String          @id @default(cuid())
+  movementId  String
+  movement    FinancialRecord @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  bankAccountId String
+  bankAccount BankAccount    @relation(fields: [bankAccountId], references: [id])
+  amount      Decimal         @db.Decimal(14, 2)
+  paidAt      DateTime        @default(now())
+  note        String?
+  createdAt   DateTime        @default(now())
+
+  @@index([movementId])
+  @@index([bankAccountId])
+  @@map("movement_payments")
+}
+
+model FinancialCategory {
+  id        String        @id @default(cuid())
+  name      String
+  type      FinancialType
+  createdAt DateTime      @default(now())
+
+  @@unique([name, type])
+  @@map("financial_categories")
 }
 
 model BankAccount {
@@ -324,6 +382,7 @@ model BankAccount {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   records     FinancialRecord[]
+  payments    MovementPayment[]
 
   @@map("bank_accounts")
 }

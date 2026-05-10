@@ -7,27 +7,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (response) return response;
   const { id } = await params;
   const body = await request.json();
-  const existing = await prisma.financialRecord.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  const record = await prisma.$transaction(async (tx) => {
-    if (existing.bankAccountId && existing.invoiceStatus !== "RECEIVABLE") {
-      await tx.bankAccount.update({
-        where: { id: existing.bankAccountId },
-        data: { balance: { increment: existing.type === "INCOME" ? -Number(existing.amount) : Number(existing.amount) } }
-      });
-    }
-    const updated = await tx.financialRecord.update({
-      where: { id },
-      data: { ...body, amount: body.amount === undefined ? undefined : Number(body.amount), month: body.month ? new Date(body.month) : undefined },
-      include: { bankAccount: true }
-    });
-    if (updated.bankAccountId && updated.invoiceStatus !== "RECEIVABLE") {
-      await tx.bankAccount.update({
-        where: { id: updated.bankAccountId },
-        data: { balance: { increment: updated.type === "INCOME" ? Number(updated.amount) : -Number(updated.amount) } }
-      });
-    }
-    return updated;
+  const record = await prisma.financialRecord.update({
+    where: { id },
+    data: {
+      type: body.type,
+      category: body.category,
+      description: body.description,
+      amount: body.amount === undefined ? undefined : Number(body.amount),
+      month: body.month ? new Date(body.month) : undefined,
+      documentStatus: body.documentStatus,
+      paymentStatus: body.paymentStatus,
+      dueDate: body.dueDate ? new Date(body.dueDate) : body.dueDate === null ? null : undefined,
+      responsible: body.responsible,
+      eventId: body.eventId,
+      taxType: body.taxType,
+      taxPaid: body.taxPaid,
+      bankAccountId: body.bankAccountId
+    },
+    include: { bankAccount: true, event: true, payments: { include: { bankAccount: true } } }
   });
   return NextResponse.json(serialize(record));
 }
@@ -36,16 +33,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const { response } = await requireSession();
   if (response) return response;
   const { id } = await params;
-  const existing = await prisma.financialRecord.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ ok: true });
-  await prisma.$transaction(async (tx) => {
-    if (existing.bankAccountId && existing.invoiceStatus !== "RECEIVABLE") {
-      await tx.bankAccount.update({
-        where: { id: existing.bankAccountId },
-        data: { balance: { increment: existing.type === "INCOME" ? -Number(existing.amount) : Number(existing.amount) } }
-      });
-    }
-    await tx.financialRecord.delete({ where: { id } });
-  });
+  await prisma.financialRecord.update({ where: { id }, data: { deletedAt: new Date(), documentStatus: "CANCELLED" } });
   return NextResponse.json({ ok: true });
 }

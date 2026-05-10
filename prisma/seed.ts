@@ -24,7 +24,9 @@ async function main() {
   await prisma.eventLineItem.deleteMany();
   await prisma.eventFinance.deleteMany();
   await prisma.event.deleteMany();
+  await prisma.movementPayment.deleteMany();
   await prisma.financialRecord.deleteMany();
+  await prisma.financialCategory.deleteMany();
   await prisma.bankAccount.deleteMany();
   await prisma.partner.deleteMany();
   await prisma.inventory.deleteMany();
@@ -115,7 +117,19 @@ async function main() {
     [FinancialType.INCOME, "Proyeccion", "Pipeline comercial Q2", 210000000, "2026-02-01", true],
     [FinancialType.EXPENSE, "Proyeccion", "Costos proyectados Q2", 130000000, "2026-02-01", true]
   ] as const;
+  await prisma.financialCategory.createMany({
+    data: [
+      { name: "Tickets", type: FinancialType.INCOME },
+      { name: "Sponsors", type: FinancialType.INCOME },
+      { name: "Venta barra", type: FinancialType.INCOME },
+      { name: "Produccion", type: FinancialType.EXPENSE },
+      { name: "Operacion", type: FinancialType.EXPENSE },
+      { name: "Personal", type: FinancialType.EXPENSE }
+    ],
+    skipDuplicates: true
+  });
   for (const [type, category, description, amount, month, projected] of records) {
+    const paid = projected ? 0 : amount;
     await prisma.financialRecord.create({
       data: {
         type,
@@ -124,6 +138,12 @@ async function main() {
         amount,
         month: new Date(month),
         projected,
+        documentStatus: projected ? "PROJECTED" : type === FinancialType.INCOME ? "COLLECTED" : "PAID",
+        paymentStatus: projected ? "PENDING" : "SETTLED",
+        paidAmount: paid,
+        pendingBalance: amount - paid,
+        dueDate: new Date("2026-03-15"),
+        responsible: type === FinancialType.INCOME ? "Comercial" : "Operaciones",
         invoiceStatus: projected ? InvoiceStatus.RECEIVABLE : InvoiceStatus.PAID,
         taxType: type === FinancialType.INCOME ? TaxType.IVA : TaxType.NONE,
         bankAccountId: projected ? null : mainAccount.id
