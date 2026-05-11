@@ -94,6 +94,7 @@ enum EventLineType {
 }
 
 enum EventStatus {
+  PROPOSAL
   PLANNING
   ACTIVE
   CLOSED

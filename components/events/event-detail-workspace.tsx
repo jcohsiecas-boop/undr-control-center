@@ -11,9 +11,10 @@ import { Select } from "@/components/ui/select";
 import { money } from "@/lib/utils";
 
 type Line = { id: string; type: "INCOME" | "EXPENSE" | "PERSONNEL" | "SPONSOR"; concept: string; quantity: number; unitCost: string | number; projected: string | number; actual: string | number; responsible: string | null; financialStatus: "PENDING" | "PARTIAL" | "SETTLED"; actionedAt: string | null; actionedBy?: { name: string | null; email: string } | null };
-type EventDetail = { id: string; eventId: string; slug: string; name: string; date: string; budget: string | number; status: "PLANNING" | "ACTIVE" | "CLOSED" | "CANCELLED"; lineItems: Line[] };
+type EventStatus = "PROPOSAL" | "PLANNING" | "ACTIVE" | "CLOSED" | "CANCELLED";
+type EventDetail = { id: string; eventId: string; slug: string; name: string; date: string; budget: string | number; status: EventStatus; lineItems: Line[] };
 
-const statusLabel = { PLANNING: "Planeacion", ACTIVE: "Activo", CLOSED: "Cerrado", CANCELLED: "Cancelado" };
+const statusLabel: Record<EventStatus, string> = { PROPOSAL: "Propuesta", PLANNING: "Planeacion", ACTIVE: "Activo", CLOSED: "Cerrado", CANCELLED: "Cancelado" };
 
 export function EventDetailWorkspace({ initialEvent }: { initialEvent: EventDetail }) {
   const [event, setEvent] = useState(initialEvent);
