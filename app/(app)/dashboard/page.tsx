@@ -10,7 +10,7 @@ export default async function DashboardPage() {
   const tasks = await prisma.task.findMany({ include: { phase: true }, orderBy: { updatedAt: "desc" } });
   const phases = await prisma.phase.findMany({ include: { tasks: true }, orderBy: { order: "asc" } });
   const logs = await prisma.activityLog.findMany({ include: { task: true, user: true }, orderBy: { createdAt: "desc" }, take: 10 });
-  const records = await prisma.financialRecord.findMany();
+  const records = await prisma.financialRecord.findMany({ where: { deletedAt: null } });
   const events = await prisma.event.findMany();
   const partners = await prisma.partner.findMany();
   const inventory = await prisma.inventory.findMany();

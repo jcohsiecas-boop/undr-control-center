@@ -9,7 +9,7 @@ export async function GET() {
   const tasks = await prisma.task.findMany({ include: { phase: true, assignee: true, comments: true, attachments: true }, orderBy: { updatedAt: "desc" } });
   const phases = await prisma.phase.findMany({ include: { tasks: true }, orderBy: { order: "asc" } });
   const activity = await prisma.activityLog.findMany({ include: { user: true, task: true }, orderBy: { createdAt: "desc" }, take: 12 });
-  const financial = await prisma.financialRecord.findMany();
+  const financial = await prisma.financialRecord.findMany({ where: { deletedAt: null } });
   const events = await prisma.event.findMany({ include: { eventFinances: true }, orderBy: { date: "desc" } });
   const partners = await prisma.partner.findMany();
   const inventory = await prisma.inventory.findMany();
