@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
+    "tickets:sync": "tsx scripts/add-operational-tickets.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
