@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen bg-background noise">
       <Sidebar events={events} />
       <div className="min-w-0 flex-1">
-        <Topbar />
+        <Topbar events={events} />
         <main className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-6">{children}</main>
       </div>
     </div>
