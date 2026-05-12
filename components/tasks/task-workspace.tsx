@@ -225,14 +225,14 @@ function Kanban({
                           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-md border border-border bg-background/70 p-3 shadow-sm">
                           <div className="flex items-start justify-between gap-2">
                             <p className="text-sm font-medium">{task.title}</p>
-                            <Select className="h-8 w-32 shrink-0" value={task.priority} onChange={(event) => updateTask(task.id, { priority: event.target.value as Task["priority"] })}>
+                            <Select className="w-32 shrink-0" value={task.priority} onChange={(event) => updateTask(task.id, { priority: event.target.value as Task["priority"] })}>
                               <option value="LOW">Baja</option>
                               <option value="MEDIUM">Media</option>
                               <option value="HIGH">Alta</option>
                               <option value="CRITICAL">Critica</option>
                             </Select>
                           </div>
-                          <Select className="mt-2 h-9 w-full min-w-0 text-xs" value={task.responsiblePartner?.id ?? ""} onChange={(event) => updateTask(task.id, { responsiblePartnerId: event.target.value || null })}>
+                          <Select className="mt-2 w-full min-w-0 text-xs" value={task.responsiblePartner?.id ?? ""} onChange={(event) => updateTask(task.id, { responsiblePartnerId: event.target.value || null })}>
                             <option value="">Sin responsable</option>
                             {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}
                           </Select>

@@ -78,7 +78,7 @@ export function EventsWorkspace({ initialEvents }: { initialEvents: EventItem[] 
             <Card key={event.id} className="bg-card/75 p-5 transition hover:-translate-y-0.5 hover:bg-card">
               <div className="flex items-start justify-between gap-3">
                 <div><h2 className="text-lg font-semibold">{event.name}</h2><p className="mt-1 text-xs text-muted-foreground">{new Date(event.date).toLocaleDateString("es-CO")}</p></div>
-                <Select className="h-8 w-32" value={event.status} onChange={(e) => updateEventStatus(event.id, e.target.value as EventStatus)}>
+                <Select className="w-32" value={event.status} onChange={(e) => updateEventStatus(event.id, e.target.value as EventStatus)}>
                   <option value="PROPOSAL">Propuesta</option>
                   <option value="PLANNING">Planeacion</option>
                   <option value="ACTIVE">Activo</option>
